@@ -1,0 +1,56 @@
+#!/usr/bin/perl
+use strict;
+use warnings;
+
+package chas;
+
+sub new {
+    bless {}, 'chas';
+}
+
+sub change_keyboard {
+    my $self = shift;
+    $self->{keyboard_options} = { $self->_read_keyboard_options };
+    $self->_swap_options;
+    $self->_add_dash_to_parameters;
+    $self->_execute_command;
+}
+
+sub _execute_command {
+    my $self = shift;
+    system 'setxkbmap', %{ $self->{keyboard_options} };
+}
+
+sub _add_dash_to_parameters {
+    my $self = shift;
+    for ( keys %{ $self->{keyboard_options} } ) {
+        $self->{keyboard_options}{"-$_"} = $self->{keyboard_options}{$_};
+        delete $self->{keyboard_options}{$_};
+    }
+}
+
+sub _swap_options {
+    my $self = shift;
+    if ( defined $self->{keyboard_options}{variant}
+        && $self->{keyboard_options}{variant} eq 'dvorak' )
+    {
+        delete $self->{keyboard_options}{variant};
+    }
+    else {
+        $self->{keyboard_options}{variant} = 'dvorak';
+    }
+}
+
+sub _read_keyboard_options {
+    my $self = shift;
+    my %keyboard_options;
+    open my $ch, '-|', 'setxkbmap -query'
+      or die "Cannot execute command. Did you install it?";
+    my $output = join '', @{ [<$ch>] };
+    while ( $output =~ /(\w+):\s+(\w+)\s+/g ) {
+        $keyboard_options{$1} = $2;
+    }
+    return %keyboard_options;
+}
+my $chas = chas->new();
+$chas->change_keyboard();
